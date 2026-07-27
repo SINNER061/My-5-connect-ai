@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Connect 5 Impossible – a modern Connect-4 variant on a 9×7 board" />
+    <title>Connect 5 Impossible</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+
+    <!-- ─── Start Screen ──────────────────────────────────────── -->
+    <div id="start-screen" class="screen">
+      <div class="start-card glass">
+        <h1 class="game-title">
+          <span class="title-connect">Connect</span>
+          <span class="title-five">5</span>
+          <span class="title-impossible">Impossible</span>
+        </h1>
+        <p class="subtitle">9 × 7 board &nbsp;·&nbsp; 5 in a row to win</p>
+
+        <div class="start-choices">
+          <button id="btn-human-first" class="btn btn-primary">
+            <span class="btn-icon">🧑</span>
+            Human First
+          </button>
+          <button id="btn-ai-first" class="btn btn-secondary">
+            <span class="btn-icon">🤖</span>
+            AI First
+          </button>
+        </div>
+
+        <p class="rules-hint">
+          Drop pieces into columns &nbsp;·&nbsp; Gravity fills from the bottom
+        </p>
+      </div>
+    </div>
+
+    <!-- ─── Game Screen ───────────────────────────────────────── -->
+    <div id="game-screen" class="screen hidden">
+
+      <!-- Header -->
+      <header class="game-header">
+        <h2 class="game-title-small">
+          Connect <span class="accent">5</span> Impossible
+        </h2>
+
+        <!-- Status bar -->
+        <div class="status-bar glass">
+          <div id="turn-indicator" class="turn-indicator p1"></div>
+          <span id="status-text" class="status-text">Player 1's turn</span>
+          <div id="thinking-indicator" class="thinking-indicator" aria-label="AI is thinking">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Board -->
+      <main class="board-wrapper">
+        <!-- Column-drop arrows -->
+        <div id="column-arrows" class="column-arrows" aria-hidden="true">
+          <!-- Injected by JS if needed; placeholders for hover hint -->
+        </div>
+
+        <div id="board" class="board glass" role="grid" aria-label="Connect 5 game board">
+          <!-- Cells injected by renderer -->
+        </div>
+      </main>
+
+      <!-- Controls -->
+      <footer class="game-controls">
+        <button id="btn-undo"     class="btn btn-ghost">↩ Undo</button>
+        <button id="btn-restart"  class="btn btn-ghost">↺ Restart</button>
+        <button id="btn-new-game" class="btn btn-secondary">New Game</button>
+      </footer>
+
+      <!-- Legend -->
+      <div class="legend" aria-label="Legend">
+        <span class="legend-item">
+          <span class="legend-dot p1"></span> You
+        </span>
+        <span class="legend-item">
+          <span class="legend-dot p2"></span> AI
+        </span>
+      </div>
+
+    </div>
+
+  </body>
+</html>

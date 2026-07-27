@@ -1,0 +1,20 @@
+{
+  "name": "connect-5-impossible",
+  "version": "1.0.0",
+  "description": "Connect 5 Impossible – Phase 1 Game Engine Foundation",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --config jest.config.cjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.4",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.12"
+  }
+}
