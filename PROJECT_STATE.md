@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-**Phase 3: ✅ Complete – Strong AI**
+**Phase 3A: ✅ Complete – Tactical Search System**
 
 ---
 
@@ -63,21 +63,59 @@ Phase 2 (minimax AI) was merged into Phase 3.
 | Endgame tightening            | ✅     |
 | Gravity-accessibility weighting | ✅   |
 
-#### Threat detection
-| Feature                       | Status |
-|-------------------------------|--------|
-| Immediate win detection       | ✅ (always correct) |
-| Immediate forced block        | ✅ (always correct) |
-| Forced sequence search (TSS)  | ✅ (10-ply horizon) |
-| Double threat detection       | ✅ (via hasFour + move ordering) |
-| Fork / split / overlapping    | ✅ (via window scoring + TSS) |
-| Trap detection                | ✅ (TSS forced-sequence) |
-| Adaptive search extensions    | ✅ (extend 1 ply on four-threat) |
+---
 
-#### Horizon effect reduction
-- Search extensions trigger when a move creates a direct four
-- TSS pre-search (10 plies) before main alpha-beta catches forced wins
-- TT stores best moves across iterations
+### Phase 3A – Tactical Search System ✅
+
+**File:** `src/game/tactical.ts` (new dedicated module)  
+**Integration:** `src/game/ai.ts` — `chooseMove` now calls `tacticalSearch` before the main alpha-beta  
+**Tests:** `src/tests/tactical.test.ts` — 35 new tests
+
+#### Tactical Search Features
+| Feature                       | Status | Source                          |
+|-------------------------------|--------|---------------------------------|
+| Multi-ply Threat Space Search | ✅ Fully | `tacticalSearch` / `tssInternal` |
+| Forced Sequence Search        | ✅ Fully | `tssInternal` Step 4            |
+| Double Threat Detection       | ✅ Fully | `countThreats` / `isDoubleThreat` |
+| Fork Detection                | ✅ Fully | `detectFork` / `findForkingMoves` |
+| Trap Detection                | ✅ Fully | `tssInternal` Step 5 (root-only) |
+
+#### `countThreats` — Double Threat Detection
+Scans every WIN_LENGTH window in all 4 directions; classifies by:
+- `fours` — accessible four-threats (empty cell at `tops[col]`)
+- `foursLatent` — latent four-threats (empty not yet accessible)
+- `openThrees` — open-three threats (both ends beyond window empty)
+- `threes` — single-end three-threats
+- `urgentCols` — columns that MUST be played NOW to block a four
+
+#### `detectFork` — Fork Detection
+Detects three classes of forks by placing piece and checking resulting threats:
+- **double-four**: ≥2 accessible fours → opponent blocks one, other wins
+- **four-three**: 1 four + surviving threat verified after simulated forced block
+- **double-three**: ≥2 simultaneous open-three threats
+
+#### `tssInternal` — TSS / Forced Sequence / Trap
+Five-step recursive search:
+1. **Immediate win** — any move that wins right now
+2. **Opponent double-threat guard** — abort if opponent has ≥2 fours (can't win tactically)
+3. **Fork detection** — double-four/four-three/double-three (returns immediately)
+4. **Forced sequence** — create a four → opponent's forced block → recurse (horizon-2)
+5. **Trap detection** (root only, horizon ≥ 6) — quiet setup moves where every dangerous opponent response still leads to a forced win
+
+#### TSS call chain in `chooseMove`
+```
+chooseMove()
+  └── Step 3: tacticalSearch(board, tops, player, TSS_HORIZON=8)
+        └── tssInternal(horizon=8, depth=0)
+              ├── [1] immediate win scan
+              ├── [2] opponent double-threat guard (countThreats)
+              ├── [3] detectFork for each legal col
+              ├── [4] forced-sequence: drop → countThreats → for each urgentCol:
+              │         opponent drops → isWinAt guard → tssInternal(horizon-2)
+              └── [5] trap: quiet move → dangerous-opp-responses → tssInternal(horizon-2)
+  └── Step 3 fallback: forcedWinSearch (legacy, kept for safety)
+  └── Step 4: iterative-deepening alpha-beta (unchanged)
+```
 
 ---
 
@@ -103,15 +141,19 @@ Phase 2 (minimax AI) was merged into Phase 3.
 |--------------------|-------|--------|
 | Engine (Phase 1)   | 56    | ✅ All passing |
 | AI correctness     | 12    | ✅ All passing |
-| **Total**          | **68** | **✅** |
+| Tactical (Phase 3A)| 35    | ✅ All passing |
+| **Total**          | **103** | **✅** |
 
-Key AI test coverage:
-- Immediate win (horizontal, vertical)
-- Forced block (horizontal, vertical)
-- Always plays a legal move (200 random positions)
-- Returns -1 on game over
-- AI vs AI: game terminates (10 games, fast mode)
-- AI vs AI: never returns illegal move (10 games, fast mode)
+Key tactical test coverage:
+- `countThreats` — empty board, horizontal four, vertical four, urgentCols, three-threats
+- `detectFork` — non-forking move, mutation safety, double-four, four-three, double-three
+- `findForkingMoves` — empty board, mutation safety, legality of results
+- `isDoubleThreat` — false on single threat, false on empty board
+- `tacticalSearch` — immediate win (H/V), no mutation, TSS_HORIZON export, trap legality
+- Forced sequence — legal results, kind classification, horizon=0 guard
+- Immediate win (AI + TSS) — horizontal, vertical, diagonal
+- Immediate block (AI + TSS) — horizontal, vertical, urgentCols
+- Integration — 50 random positions always legal, 5 AI-vs-AI complete games, 30 random positions column range
 
 ---
 
@@ -125,7 +167,7 @@ connect-5-impossible/
 ├── tsconfig.test.json
 ├── jest.config.cjs
 ├── PROJECT_STATE.md               ← this file
-├── PHASE_HANDOFF.md               ← Phase 3 handoff doc
+├── PHASE_HANDOFF.md               ← Phase 3A handoff doc
 ├── scripts/
 │   └── benchmark.mjs              ← 10 000-game benchmark runner
 └── src/
@@ -135,7 +177,8 @@ connect-5-impossible/
     │   ├── constants.ts
     │   ├── types.ts
     │   ├── engine.ts              ← immutable engine (unchanged)
-    │   └── ai.ts                  ← Phase 3 strong AI (rewritten)
+    │   ├── ai.ts                  ← Phase 3 AI + Phase 3A integration
+    │   └── tactical.ts            ← Phase 3A: new tactical search module
     ├── ui/
     │   ├── app.ts
     │   ├── renderer.ts
@@ -144,7 +187,8 @@ connect-5-impossible/
     │   └── ai.worker.ts           ← unchanged; calls chooseMove(state)
     └── tests/
         ├── engine.test.ts         ← 56 engine tests (unchanged)
-        └── ai.test.ts             ← 12 AI correctness tests (Phase 3)
+        ├── ai.test.ts             ← 12 AI correctness tests (Phase 3)
+        └── tactical.test.ts       ← 35 tactical tests (Phase 3A)
 ```
 
 ---
@@ -155,7 +199,7 @@ connect-5-impossible/
 npm install
 npm run dev          # dev server at :5000
 npm run build        # production build
-npm test             # all 68 tests
+npm test             # all 103 tests
 npm run typecheck    # TypeScript check
 npm run benchmark    # 10 000-game AI benchmark (requires tsx)
 ```
@@ -171,3 +215,4 @@ npm run benchmark    # 10 000-game AI benchmark (requires tsx)
 - Opening book for the first few moves
 - Endgame tablebase (for near-full boards)
 - UCT / Monte Carlo Tree Search variant
+- SSS* / proof-number search for exact tactical verification

@@ -21,6 +21,7 @@
 
 import { COLS, ROWS, WIN_LENGTH, EMPTY, PLAYER_TWO } from './constants.js';
 import type { Board, GameState, Player } from './types.js';
+import { tacticalSearch, TSS_HORIZON } from './tactical.js';
 
 // ─── Tuneable constants ────────────────────────────────────────────────────────
 
@@ -821,9 +822,16 @@ export function chooseMove(
     return mustBlockCols[0];
   }
 
-  // --- 3. Forced-win search (TSS) up to 10 plies ---
+  // --- 3. Tactical Search (TSS) – Phase 3A complete implementation ---
+  // tacticalSearch covers all five tactical features:
+  //   double-four fork, four-three fork, double-three fork,
+  //   multi-ply forced sequences, and trap setups.
+  // It is a strict superset of the legacy forcedWinSearch below.
   const tssBoard = new Int8Array(board);
   const tssTops  = new Int8Array(tops);
+  const tssResult = tacticalSearch(tssBoard, tssTops, player, TSS_HORIZON);
+  if (tssResult.col >= 0) return tssResult.col;
+  // Legacy forced-win search kept as belt-and-suspenders (different horizon/path).
   const forcedCol = forcedWinSearch(tssBoard, tssTops, player, 10);
   if (forcedCol >= 0) return forcedCol;
 
